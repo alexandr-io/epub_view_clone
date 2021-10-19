@@ -11,6 +11,7 @@ import 'package:html/parser.dart' show parse;
 import 'package:flutter_html/flutter_html.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:rxdart/rxdart.dart';
+import 'package:scroll_to_index/scroll_to_index.dart';
 
 import 'epub_cfi/generator.dart';
 import 'epub_cfi/interpreter.dart';
@@ -41,8 +42,10 @@ typedef ChaptersBuilder = Widget Function(
 typedef ExternalLinkPressed = void Function(String href);
 
 class EpubView extends StatefulWidget {
+
   const EpubView({
     required this.controller,
+    required this.progression,
     this.itemBuilder,
     this.onExternalLinkPressed,
     this.loaderSwitchDuration,
@@ -59,6 +62,7 @@ class EpubView extends StatefulWidget {
   }) : super(key: key);
 
   final EpubController controller;
+  final String progression;
   final ExternalLinkPressed? onExternalLinkPressed;
 
   /// Show document loading error message inside [EpubView]
@@ -79,14 +83,15 @@ class EpubView extends StatefulWidget {
   final TextStyle textStyle;
 
   @override
-  _EpubViewState createState() => _EpubViewState();
+  EpubViewState createState() => EpubViewState();
 }
 
-class _EpubViewState extends State<EpubView> {
+class EpubViewState extends State<EpubView> {
   _EpubViewLoadingState _loadingState = _EpubViewLoadingState.loading;
   Exception? _loadingError;
   ItemScrollController? _itemScrollController;
   ItemPositionsListener? _itemPositionListener;
+  AutoScrollController? _scrollController;
   List<EpubChapter> _chapters = [];
   List<Paragraph> _paragraphs = [];
   EpubCfiReader? _epubCfiReader;
@@ -100,6 +105,7 @@ class _EpubViewState extends State<EpubView> {
 
   @override
   void initState() {
+    _scrollController = AutoScrollController(initialScrollOffset: double.parse(widget.progression.isEmpty ? '0' : widget.progression));
     _itemScrollController = ItemScrollController();
     _itemPositionListener = ItemPositionsListener.create();
     widget.controller._attach(this);
@@ -113,6 +119,15 @@ class _EpubViewState extends State<EpubView> {
     _bookLoaded.close();
     widget.controller._detach();
     super.dispose();
+  }
+
+  String position() {
+    // print(_scrollController?.offset);
+    // print(_scrollController?.position.maxScrollExtent);
+    // print((_scrollController!.offset * 100) /
+    //     _scrollController!.position.maxScrollExtent);
+
+    return _scrollController!.offset.toString();
   }
 
   Future<bool> _init() async {
@@ -133,7 +148,6 @@ class _EpubViewState extends State<EpubView> {
     _itemPositionListener!.itemPositions.addListener(_changeListener);
     _initialized = true;
     _bookLoaded.sink.add(true);
-
     return true;
   }
 
@@ -176,12 +190,13 @@ class _EpubViewState extends State<EpubView> {
       return null;
     }
 
-    _itemScrollController?.scrollTo(
-      index: index,
-      duration: duration,
-      alignment: alignment,
-      curve: curve,
-    );
+    // _itemScrollController?.scrollTo(
+    //   index: index,
+    //   duration: duration,
+    //   alignment: alignment,
+    //   curve: curve,
+    // );
+    _scrollController?.scrollToIndex(index, preferPosition: AutoScrollPosition.begin);
   }
 
   void _onLinkPressed(String href, void Function(String href)? openExternal) {
@@ -392,12 +407,25 @@ class _EpubViewState extends State<EpubView> {
         widget.itemBuilder?.call(context, _chapters, _paragraphs, index) ??
         _defaultItemBuilder(index);
 
-    return ScrollablePositionedList.builder(
-      initialScrollIndex: _epubCfiReader!.paragraphIndexByCfiFragment ?? 0,
-      itemCount: _paragraphs.length,
-      itemScrollController: _itemScrollController,
-      itemPositionsListener: _itemPositionListener,
-      itemBuilder: _buildItem,
+    // return ScrollablePositionedList.builder(
+    //   initialScrollIndex: _epubCfiReader!.paragraphIndexByCfiFragment ?? 0,
+    //   itemCount: _paragraphs.length,
+    //   itemScrollController: _itemScrollController,
+    //   itemPositionsListener: _itemPositionListener,
+    //   itemBuilder: _buildItem,
+    // );
+
+    return ListView(
+      controller: _scrollController,
+      children: [
+        for (var paragraph in _paragraphs)
+          AutoScrollTag(
+            key: ValueKey(_paragraphs.indexOf(paragraph)),
+            controller: _scrollController!,
+            index: _paragraphs.indexOf(paragraph),
+            child: _buildItem(context, _paragraphs.indexOf(paragraph)),
+          ),
+      ],
     );
   }
 

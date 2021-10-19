@@ -9,7 +9,7 @@ class EpubController {
   Future<EpubBook> document;
   final String? epubCfi;
 
-  _EpubViewState? _epubViewState;
+  EpubViewState? _epubViewState;
   List<EpubViewChapter>? _cacheTableOfContents;
 
   final BehaviorSubject<EpubChapterViewValue?> _valueStreamController =
@@ -32,10 +32,11 @@ class EpubController {
       _tableOfContentsStreamController.stream;
 
   void jumpTo({required int index, double alignment = 0}) =>
-      _epubViewState?._itemScrollController?.jumpTo(
-        index: index,
-        alignment: alignment,
-      );
+      _epubViewState?._scrollController?.scrollToIndex(index, preferPosition: AutoScrollPosition.begin);
+      // _epubViewState?._itemScrollController?.jumpTo(
+      //   index: index,
+      //   alignment: alignment,
+      // );
 
   Future<void>? scrollTo({
     required int index,
@@ -43,12 +44,13 @@ class EpubController {
     double alignment = 0,
     Curve curve = Curves.linear,
   }) =>
-      _epubViewState?._itemScrollController?.scrollTo(
-        index: index,
-        duration: duration,
-        alignment: alignment,
-        curve: curve,
-      );
+    _epubViewState?._scrollController?.scrollToIndex(index, preferPosition: AutoScrollPosition.begin);
+      // _epubViewState?._itemScrollController?.scrollTo(
+      //   index: index,
+      //   duration: duration,
+      //   alignment: alignment,
+      //   curve: curve,
+      // );
 
   void gotoEpubCfi(
     String epubCfi, {
@@ -132,7 +134,7 @@ class EpubController {
     }
   }
 
-  void _attach(_EpubViewState epubReaderViewState) {
+  void _attach(EpubViewState epubReaderViewState) {
     _epubViewState = epubReaderViewState;
 
     _loadDocument(document);
