@@ -121,6 +121,10 @@ class EpubViewState extends State<EpubView> {
     super.dispose();
   }
 
+  void goToPosition(double position) {
+    _scrollController?.jumpTo(position);
+  }
+
   String position() {
     // print(_scrollController?.offset);
     // print(_scrollController?.position.maxScrollExtent);
